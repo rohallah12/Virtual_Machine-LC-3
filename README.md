@@ -1,6 +1,6 @@
 # RouVM
 
-RouVM is a Proof of Work blockchain that includes a basic Virtual Machine (VM). This project is built from scratch to demonstrate a thorough understanding of blockchain and virtual machine technologies.
+RouChain is a Proof of Work blockchain that includes a basic Virtual Machine (VM). This repository includes the VM which is going to be used in the RouChain blockchain.
 
 ## Features
 
