@@ -84,6 +84,23 @@ void update_flag(uint16_t r){
    }
 }
 
+//implementation of add opcode
+void Add(uint16_t data){
+   	//first we need to extract the destination and source registers 
+    uint16_t rd = (data >> 9) & 0x7;//destination
+    uint16_t rs = (data >> 6) & 0x7;//source
+   	
+    //then we extarct the ADD mode (immediate mode or register mode)
+    uint16_t imm_mode = (data >> 5) & 0x1;
+    
+    if(imm_mode){    
+    	uint16_t left = reg[rs];   	 
+   		reg[rd] = left + (sign_extend(data & 0x1) 	    
+    }else{
+        
+    }
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -98,5 +115,10 @@ int main(int argc, char *argv[])
     while (running) {
         uint16_t *instruction = &reg[R_PC];
         uint16_t opcode = *(instruction) >> 12;//shift instruction to right by 12 bits to get 4 bits of the opcode
+        switch(opcode){
+        	case OP_ADD:
+           		Add(*(instruction) >> 4);
+  				break; 
+        }
     }
 }
