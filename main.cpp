@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/termios.h>
 #include <sys/mman.h>
+#include "./keyboard.cpp"
 
 #define MEMORY_MAX (1 << 16)
 
@@ -84,6 +85,63 @@ void update_flag(uint16_t r){
    }
 }
 
+//write to a memory location at address
+void mem_write(uint16_t address, uint16_t value){
+    memory[address] = value;
+}
+
+//load data from a location in memory
+uint16_t mem_read(uint16_t location){
+    //checking if we are reading from keyboard registers, this is because
+    //we are going to do some WASD things in our program!
+    if(location == MR_KBSR){
+        if(check_key()){
+            memory[MR_KBSR] = (1 << 15);
+            memory[MR_KBDR] = getchar() ;
+        } else{
+            memory[MR_KBSR] = 0;
+        }
+    }
+    //return the data from the location
+    return memory[location];
+}
+
+//implementation of add opcode
+void Add(uint16_t data){
+    //first we need to extract the destination and source registers
+    uint16_t rd = (data >> 9) & 0x7;//destination
+    uint16_t rs = (data >> 6) & 0x7;//source
+
+    //then we extarct the ADD mode (immediate mode or register mode)
+    uint16_t imm_mode = (data >> 5) & 0x1;
+    uint16_t left = reg[rs];
+
+    //if immediate mode, then extract the value from last 4 bits, and extend it to a 16 bit value, be careful about negative
+    //numbers (using two's complement)
+    if(imm_mode){
+        reg[rd] = left + (sign_extend(data & 0x1F, 5));
+    }else{
+        //if immediate mode is not enabled, then simply add up values at two registers (extarct the register containing the
+        //second number from last 4 bits)
+        reg[rd] = left + reg[data & 0x7];
+    }
+    //update the condition flag
+    update_flag(rd);
+}
+
+//Load indirect, this is used to load data from an address into the destination register
+void LDI(uint16_t data){
+    //destination register
+    uint16_t rd = (data >> 9) & 0x7;
+    //extract the offset from program counter
+    uint16_t offset = sign_extend(data & 0x1FF, 9);
+    //load the memory address from the PC + offset location, then fetch the value from that memory address
+    //and save it in destination register
+    reg[rd] = mem_read(mem_read(reg[R_PC] + offset));
+    update_flag(reg[rd]);
+}
+
+
 
 int main(int argc, char *argv[])
 {
@@ -98,5 +156,10 @@ int main(int argc, char *argv[])
     while (running) {
         uint16_t *instruction = &reg[R_PC];
         uint16_t opcode = *(instruction) >> 12;//shift instruction to right by 12 bits to get 4 bits of the opcode
+        switch(opcode){
+            case OP_ADD:
+                Add(*(instruction) >> 4);
+                break;
+        }
     }
 }

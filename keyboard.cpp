@@ -10,6 +10,13 @@
 #include <sys/termios.h>
 #include <sys/mman.h>
 
+//this are the keyboard registers, this registers can't be defined locally
+enum
+{
+    MR_KBSR = 0xFE00, /* keyboard status */
+    MR_KBDR = 0xFE02  /* keyboard data */
+};
+
 struct termios original_tio;
 
 void disable_input_buffering()
