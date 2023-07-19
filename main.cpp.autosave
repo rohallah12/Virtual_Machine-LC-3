@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/termios.h>
 #include <sys/mman.h>
+#include "./keyboard.cpp"
 
 #define MEMORY_MAX (1 << 16)
 
@@ -84,6 +85,27 @@ void update_flag(uint16_t r){
    }
 }
 
+//write to a memory location at address
+void mem_write(uint16_t address, uint16_t value){
+    memory[address] = value;
+}
+
+//load data from a location in memory
+uint16_t mem_read(uint16_t location){
+   	//checking if we are reading from keyboard registers, this is because
+    //we are going to do some WASD things in our program!
+    if(location == MR_KBSR){
+        if(check_key()){
+            memory[MR_KBSR] = (1 << 15);
+            memory[MR_KBDR] = getchar() ;
+        } else{
+            memory[MR_KBSR] = 0;
+        }
+    }
+    //return the data from the location
+    return memory[location];
+}
+
 //implementation of add opcode
 void Add(uint16_t data){
    	//first we need to extract the destination and source registers 
@@ -92,14 +114,30 @@ void Add(uint16_t data){
    	
     //then we extarct the ADD mode (immediate mode or register mode)
     uint16_t imm_mode = (data >> 5) & 0x1;
+    uint16_t left = reg[rs];   	 
     
+    //if immediate mode, then extract the value from last 4 bits, and extend it to a 16 bit value, be careful about negative
+    //numbers (using two's complement)
     if(imm_mode){    
-    	uint16_t left = reg[rs];   	 
-   		reg[rd] = left + (sign_extend(data & 0x1) 	    
+   		reg[rd] = left + (sign_extend(data & 0x1F, 5)); 	    
     }else{
-        
+        //if immediate mode is not enabled, then simply add up values at two registers (extarct the register containing the 
+        //second number from last 4 bits)
+        reg[rd] = left + reg[data & 0x7];
     }
+    //update the condition flag
+    update_flag(rd);
 }
+
+//Load indirect, this is used to load data from an address into the destination register
+void LDI(uint16_t data){
+    //destination register
+	uint16_t rd = (data >> 9) & 0x7;   	 
+    uint16_t offset = sign_extend(data & 0x1FF, 9);
+    reg[rd] = mem_read(mem_read(reg[R_PC] + offset));
+    up
+}
+
 
 
 int main(int argc, char *argv[])
